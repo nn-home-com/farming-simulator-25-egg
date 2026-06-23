@@ -26,9 +26,10 @@ RUN dpkg --add-architecture i386 \
  && apt-get install -y --no-install-recommends \
       wine wine32 wine64 winbind \
       xvfb xdotool \
+      libvulkan1 mesa-vulkan-drivers \
       p7zip-full cabextract \
       nodejs \
-      netcat-openbsd procps curl ca-certificates tini gosu locales tzdata \
+      iproute2 netcat-openbsd procps curl ca-certificates tini gosu locales tzdata \
  && sed -i 's/^# *\(en_US.UTF-8\)/\1/' /etc/locale.gen && locale-gen \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*

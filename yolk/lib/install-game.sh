@@ -59,31 +59,44 @@ activate_license() {
         return 1
     fi
 
-    log "Activating with provided CD-key via xdotool (experimental)..."
+    log "Activating with provided CD-key via xdotool..."
+    # The launcher shows the "Please enter your Farming Simulator 25 Product Key"
+    # dialog; the input field is auto-focused. Coordinates below are for the fixed
+    # 1280x720 Xvfb that start.sh creates. The field auto-formats into 5-char
+    # groups and ignores typed dashes, so we strip them before typing.
+    local serial_clean
+    serial_clean=$(printf '%s' "${GAME_SERIAL}" | tr -d '[:space:]-')
+
     wine "${GAME_DIR}/FarmingSimulator2025.exe" >/tmp/fs25-activate.log 2>&1 &
     local game_pid=$!
-    sleep 25  # give the activation dialog time to render
+    sleep 30  # give the activation dialog time to render
 
-    # Type the key, then confirm. Field focus/layout is game-version specific;
-    # adjust the key sequence below once verified against the real dialog.
-    xdotool type --clearmodifiers "${GAME_SERIAL}"
-    sleep 1
-    xdotool key --clearmodifiers Tab
-    sleep 1
-    xdotool key --clearmodifiers Return
-    sleep 20
+    # Focus + clear the field, type the key, click the "Activate >" button.
+    xdotool mousemove 746 361 click 1; sleep 0.5
+    xdotool key --clearmodifiers ctrl+a; xdotool key --clearmodifiers Delete; sleep 0.5
+    xdotool type --clearmodifiers "${serial_clean}"; sleep 1.5
+    xdotool mousemove 875 536 click 1   # "Activate >"
 
-    # The game keeps running after activation; stop it, the .dat files persist.
+    # The .dat license files appear within a few seconds of a successful activation.
+    local ok=0
+    for _ in $(seq 1 12); do
+        sleep 5
+        if ls "${DOCS_DIR}"/*.dat >/dev/null 2>&1; then ok=1; break; fi
+    done
+
+    # After activation the launcher tries to start the 3D game and shows a GPU
+    # warning ("Could not init 3D system" -> Yes/No). Dismiss it with "No", then stop.
+    xdotool mousemove 675 435 click 1 2>/dev/null || true; sleep 2
     wineserver -k >/dev/null 2>&1 || true
     kill "$game_pid" >/dev/null 2>&1 || true
     sleep 3
 
-    if ls "${DOCS_DIR}"/*.dat >/dev/null 2>&1; then
+    if [ "$ok" -eq 1 ]; then
         log "Activation succeeded — license files generated."
         return 0
     fi
-    err "Activation did not produce license files. The CD-key automation likely"
-    err "needs adjusting for this game version. See ACTIVATION.md for the manual path."
+    err "Activation did not produce license files. The CD-key automation may need"
+    err "adjusting for this game version. See ACTIVATION.md for the manual path."
     return 1
 }
 
@@ -119,7 +132,7 @@ if [ "$DLC_ONLY" -eq 0 ]; then
         exit 1
     }
     log "Running silent install: ${installer##*/}"
-    wine "$installer" /SILENT /NOCANCEL /NOICONS >/tmp/fs25-setup.log 2>&1 || {
+    wine "$installer" /SILENT /NOCANCEL /NOICONS /SUPPRESSMSGBOXES >/tmp/fs25-setup.log 2>&1 || {
         err "Silent install failed — see /tmp/fs25-setup.log"
         exit 1
     }

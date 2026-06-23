@@ -97,6 +97,29 @@ Per SFTP / Dateimanager in die beim Erststellen angelegten Ordner:
 Mindestens `GAME_SERIAL` (CD-Key) und `WEB_PASSWORD`. Dann Server starten – der
 erste Start dauert mehrere Minuten (Installation).
 
+## Was mit echtem Spiel verifiziert ist
+
+Mit echtem GIANTS-Serial + Installer (v1.20.0.0) lokal getestet:
+
+- ✅ Silent-Install aus `*_ESD.img` (`Setup.exe /SILENT /NOCANCEL /NOICONS /SUPPRESSMSGBOXES`)
+- ✅ **CD-Key-Aktivierung vollautomatisch** per xdotool (Feld auto-fokussiert, 5er-Auto-Format, Bindestriche werden ignoriert) → Online-Aktivierung erzeugt die `.dat`-Lizenzdateien
+- ✅ GIANTS-Engine läuft **headless mit NULL-Renderer** (`-server`) und erreicht „Entered Gameplay" (kein GPU/DirectX nötig)
+- ✅ `dedicatedServer.exe` Web-Portal (bindet an Container-IP, nicht localhost)
+- ✅ Login-Flow + Session-Start-POST (`start-game.mjs`)
+- ✅ Vulkan-Loader (`libvulkan1` + `mesa-vulkan-drivers`/lavapipe) ist erforderlich
+
+## ⚠️ Bekannter Blocker (work in progress)
+
+Das **Orchestrieren der Spiel-Session über den `dedicatedServer.exe`** läuft headless
+noch nicht durch: Der vom Server gestartete Spielprozess hängt sehr früh im Init
+(erzeugt keinen Game-Log, geht nie ONLINE), obwohl der **Direktstart**
+`FarmingSimulator2025Game.exe -server` einwandfrei „Entered Gameplay" erreicht.
+Das deutet auf eine Wine-Umgebungs-/IPC-Differenz zur funktionierenden Referenz
+([arch-fs25server](https://github.com/wine-gameservers/arch-fs25server), voller
+XFCE-Desktop). Vulkan + dbus wurden ergänzt/getestet, lösen es allein noch nicht.
+Nächste Ansätze: Wine-Umgebung näher an die Referenz bringen (WM/Desktop,
+Bibliotheken) oder klären, mit welchen Flags der Server das Spiel startet.
+
 ## Bekannte offene Punkte
 
 - **CD-Key-Automatik** (`xdotool`) ist ungetestet – die Online-Aktivierung von
