@@ -1,0 +1,63 @@
+# Alternative yolk image using the official WineHQ builds instead of Debian's
+# (old) Wine 8.0. FS25's GIANTS tools are picky about the Wine version, so this
+# variant ships a current WineHQ release. Pick the branch at build time:
+#
+#   docker build -f Dockerfile.winehq --build-arg WINE_BRANCH=stable  -t fs25:winehq .
+#   docker build -f Dockerfile.winehq --build-arg WINE_BRANCH=staging -t fs25:staging .
+#
+# Everything else is identical to the default Dockerfile.
+FROM debian:bookworm-slim
+
+ARG WINE_BRANCH=stable
+
+LABEL org.opencontainers.image.title="farming-simulator-25-server"
+LABEL org.opencontainers.image.description="Headless FS25 dedicated server under WineHQ for Pterodactyl/Calagopus"
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Base helpers needed to add the WineHQ repository.
+RUN dpkg --add-architecture i386 \
+ && apt-get update \
+ && apt-get install -y --no-install-recommends wget gnupg ca-certificates \
+ && mkdir -pm755 /etc/apt/keyrings \
+ && wget -qO /etc/apt/keyrings/winehq-archive.key https://dl.winehq.org/wine-builds/winehq.key \
+ && wget -qNP /etc/apt/sources.list.d/ https://dl.winehq.org/wine-builds/debian/dists/bookworm/winehq-bookworm.sources \
+ && apt-get update \
+ && apt-get install -y --install-recommends "winehq-${WINE_BRANCH}" \
+ && apt-get install -y --no-install-recommends \
+      winbind \
+      xvfb xdotool \
+      p7zip-full cabextract \
+      nodejs \
+      netcat-openbsd procps curl tini gosu locales tzdata \
+ && sed -i 's/^# *\(en_US.UTF-8\)/\1/' /etc/locale.gen && locale-gen \
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/*
+
+# WineHQ installs into /opt/wine-<branch>/bin; put it on PATH.
+ENV PATH="/opt/wine-${WINE_BRANCH}/bin:${PATH}" \
+    LANG=en_US.UTF-8 \
+    LANGUAGE=en_US:en \
+    LC_ALL=en_US.UTF-8 \
+    TZ=UTC
+
+# Fail the build early if wine isn't actually on PATH for this branch.
+RUN wine --version
+
+RUN useradd -m -d /home/container -s /bin/bash container
+
+COPY entrypoint.sh /entrypoint.sh
+COPY start.sh /opt/fs25/start.sh
+COPY lib/ /opt/fs25/lib/
+COPY config/ /opt/fs25/config/
+RUN chmod +x /entrypoint.sh /opt/fs25/start.sh /opt/fs25/lib/*.sh
+
+USER container
+ENV HOME=/home/container \
+    USER=container
+WORKDIR /home/container
+
+STOPSIGNAL SIGINT
+
+ENTRYPOINT ["/usr/bin/tini", "-g", "--"]
+CMD ["/bin/bash", "/entrypoint.sh"]

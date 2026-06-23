@@ -1,0 +1,10 @@
+# Local test artifacts
+*.log
+/tmp/
+
+# Never commit game files or licenses
+installer/
+dlc/
+*.exe
+*.img
+*.dat

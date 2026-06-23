@@ -1,0 +1,167 @@
+{
+    "_comment": "Farming Simulator 25 dedicated server (Wine, headless) for Pterodactyl / Calagopus. You must own a separate FS25 server license and supply the installer + CD-key yourself; nothing copyrighted is downloaded by this egg.",
+    "meta": {
+        "version": "PTDL_v2",
+        "update_url": null
+    },
+    "exported_at": "2026-06-23T00:00:00+00:00",
+    "name": "Farming Simulator 25",
+    "author": "janik@mielemeier.com",
+    "description": "Headless FS25 dedicated server running under Wine. Upload the GIANTS installer, set your CD-key, and the server installs and starts itself. Management via the FS25 web portal (default port 7999).",
+    "features": null,
+    "docker_images": {
+        "FS25 Wine (ghcr)": "ghcr.io/CHANGE-ME/fs25-server:latest"
+    },
+    "file_denylist": [],
+    "startup": "bash /opt/fs25/start.sh",
+    "config": {
+        "files": "{}",
+        "startup": "{\"done\": \"Server running.\"}",
+        "logs": "{}",
+        "stop": "^C"
+    },
+    "scripts": {
+        "installation": {
+            "script": "#!/bin/bash\n# FS25 install script: prepare the directory layout and drop in guidance.\n# The heavy Wine install happens on first server boot (start.sh), because the\n# game files are large and must be uploaded by the user (license restriction).\nset -e\nmkdir -p /mnt/server/installer /mnt/server/dlc\n\ncat > /mnt/server/README-FIRST.txt <<'EOF'\nFarming Simulator 25 - dedicated server\n=======================================\n\n1. Upload the GIANTS installer into  installer/\n     - FarmingSimulator2025.exe  (or Setup.exe)\n     - or the distribution image  FarmingSimulator25_*_ESD.img / .zip\n2. (optional) Upload DLC installers into  dlc/  (FarmingSimulator25_*.exe)\n3. Set the GAME_SERIAL variable in the panel to your FS25 CD-key.\n4. Start the server. On first boot it installs silently, activates the key,\n   installs DLCs, then launches. This first boot can take several minutes.\n5. Manage the running game via the web portal on the WEB_PORT allocation.\n\nThe Steam version cannot be used as a server. You need a separate server license.\nEOF\n\necho 'Done. Upload the installer into installer/ and set GAME_SERIAL, then start the server.'",
+            "container": "debian:bookworm-slim",
+            "entrypoint": "bash"
+        }
+    },
+    "variables": [
+        {
+            "name": "CD-Key / Serial",
+            "description": "Your FS25 server CD-key. Used once on first boot to generate the license files. Leave empty if you upload pre-activated *.dat files manually.",
+            "env_variable": "GAME_SERIAL",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string|max:64"
+        },
+        {
+            "name": "Server name",
+            "description": "Name shown in the multiplayer server browser.",
+            "env_variable": "SERVER_NAME",
+            "default_value": "FS25 Server",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|max:60"
+        },
+        {
+            "name": "Web portal username",
+            "description": "Login for the dedicated-server web management portal.",
+            "env_variable": "WEB_USERNAME",
+            "default_value": "admin",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|max:32"
+        },
+        {
+            "name": "Web portal password",
+            "description": "Password for the web management portal. Change this!",
+            "env_variable": "WEB_PASSWORD",
+            "default_value": "changeme",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|max:64"
+        },
+        {
+            "name": "Web portal port",
+            "description": "Internal port for the web portal. Must match a server allocation mapped to this port.",
+            "env_variable": "WEB_PORT",
+            "default_value": "7999",
+            "user_viewable": true,
+            "user_editable": false,
+            "rules": "required|integer|between:1024,65535"
+        },
+        {
+            "name": "In-game admin password",
+            "description": "Password to authenticate as admin from within the game.",
+            "env_variable": "ADMIN_PASSWORD",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string|max:64"
+        },
+        {
+            "name": "Game join password",
+            "description": "Password players must enter to join. Leave empty for an open server.",
+            "env_variable": "GAME_PASSWORD",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string|max:64"
+        },
+        {
+            "name": "Max players",
+            "description": "Maximum number of simultaneous players (game supports up to 16).",
+            "env_variable": "MAX_PLAYERS",
+            "default_value": "12",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|integer|between:1,16"
+        },
+        {
+            "name": "Map ID",
+            "description": "Map to load, e.g. MapUS, MapFR, MapAlpine, or a mod map id.",
+            "env_variable": "MAP_ID",
+            "default_value": "MapUS",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|max:64"
+        },
+        {
+            "name": "Language",
+            "description": "Server language code (en, de, fr, ...).",
+            "env_variable": "SERVER_LANGUAGE",
+            "default_value": "en",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|max:5"
+        },
+        {
+            "name": "Crossplay allowed",
+            "description": "Allow crossplay between platforms (true/false).",
+            "env_variable": "CROSSPLAY",
+            "default_value": "true",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|in:true,false"
+        },
+        {
+            "name": "Pause if empty",
+            "description": "Pause behaviour when no players are connected (0 off, 2 default).",
+            "env_variable": "PAUSE_IF_EMPTY",
+            "default_value": "2",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|integer|between:0,2"
+        },
+        {
+            "name": "Savegame index",
+            "description": "Which savegame slot to load/continue (1-based).",
+            "env_variable": "SAVEGAME_INDEX",
+            "default_value": "1",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|integer|between:1,20"
+        },
+        {
+            "name": "Auto-save interval",
+            "description": "Auto-save interval in minutes (float, e.g. 180.000000).",
+            "env_variable": "AUTO_SAVE_INTERVAL",
+            "default_value": "180.000000",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|max:16"
+        },
+        {
+            "name": "Stats interval",
+            "description": "Statistics write interval in minutes (float).",
+            "env_variable": "STATS_INTERVAL",
+            "default_value": "360.000000",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|max:16"
+        }
+    ]
+}
