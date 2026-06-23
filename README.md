@@ -4,10 +4,10 @@ Ein Egg, um einen **headless FS25 Dedicated Server unter Wine** auf
 [Pterodactyl](https://pterodactyl.io/) oder [Calagopus](https://calagopus.com/)
 zu hosten – ohne Windows und ohne VNC.
 
-> ⚠️ **Status: experimentell, noch nicht auf echter Hardware mit echtem Spiel
-> getestet.** Besonders die automatische CD-Key-Aktivierung ist „best effort"
-> (siehe [ACTIVATION.md](ACTIVATION.md)). Feedback aus echten Tests ist
-> ausdrücklich erwünscht.
+> ✅ **Status: funktioniert.** Mit echtem GIANTS-Serial + Installer
+> (FS25 1.20.0.0) komplett verifiziert: Silent-Install, automatische
+> CD-Key-Aktivierung, headless Spielstart, Server **ONLINE**. Siehe Abschnitt
+> „Was mit echtem Spiel verifiziert ist".
 
 ## Voraussetzungen / Rechtliches
 
@@ -108,17 +108,19 @@ Mit echtem GIANTS-Serial + Installer (v1.20.0.0) lokal getestet:
 - ✅ Login-Flow + Session-Start-POST (`start-game.mjs`)
 - ✅ Vulkan-Loader (`libvulkan1` + `mesa-vulkan-drivers`/lavapipe) ist erforderlich
 
-## ⚠️ Bekannter Blocker (work in progress)
+- ✅ **End-to-End**: `start.sh` → Server **ONLINE**, Spiel-Session läuft, Log
+  wird auf die Konsole gestreamt. Aus dem finalen Image verifiziert.
 
-Das **Orchestrieren der Spiel-Session über den `dedicatedServer.exe`** läuft headless
-noch nicht durch: Der vom Server gestartete Spielprozess hängt sehr früh im Init
-(erzeugt keinen Game-Log, geht nie ONLINE), obwohl der **Direktstart**
-`FarmingSimulator2025Game.exe -server` einwandfrei „Entered Gameplay" erreicht.
-Das deutet auf eine Wine-Umgebungs-/IPC-Differenz zur funktionierenden Referenz
-([arch-fs25server](https://github.com/wine-gameservers/arch-fs25server), voller
-XFCE-Desktop). Vulkan + dbus wurden ergänzt/getestet, lösen es allein noch nicht.
-Nächste Ansätze: Wine-Umgebung näher an die Referenz bringen (WM/Desktop,
-Bibliotheken) oder klären, mit welchen Flags der Server das Spiel startet.
+Die zwei entscheidenden Stolpersteine (jetzt gelöst):
+
+1. **Web-Start sendet alle Felder** — das Portal verwendet teils `name = "x"`
+   (Leerzeichen ums `=`); der Scraper in `start-game.mjs` ist dafür
+   whitespace-tolerant, sonst fehlen `max_player`/Wirtschaftswerte und der
+   Server startet das Spiel nicht.
+2. **Wine-Virtual-Desktop** — der `dedicatedServer.exe` wird via
+   `wine explorer /desktop=…` gestartet. Ohne Desktop kann der gespawnte
+   Spiel-Kindprozess kein Fenster erstellen und stirbt vor „Entered Gameplay".
+   (dbus ist *nicht* nötig, Vulkan schon.)
 
 ## Bekannte offene Punkte
 
