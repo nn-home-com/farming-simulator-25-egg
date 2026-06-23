@@ -100,7 +100,11 @@ mkdir -p "$DEDI_DIR/logs"
 : > "$WINE_LOG"
 
 log "Launching dedicatedServer.exe..."
-wine "${GAME_DIR}/dedicatedServer.exe" >>"$WINE_LOG" 2>&1 &
+# Run inside a Wine virtual desktop. The dedicated server spawns the game as a
+# child process, and without a desktop that child cannot create its window
+# ("no driver could be loaded") and dies before it ever reaches gameplay. The
+# virtual desktop gives both processes a working window driver on the Xvfb display.
+wine explorer /desktop=fs25,1280x720 "${GAME_DIR}/dedicatedServer.exe" >>"$WINE_LOG" 2>&1 &
 WINE_PID=$!
 
 # ---- 8. Clean shutdown handler ------------------------------------------------

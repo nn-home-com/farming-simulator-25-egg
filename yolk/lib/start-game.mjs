@@ -56,30 +56,32 @@ async function login() {
 function scrapeForm(html) {
   const params = {};
 
+  // Note: the portal emits both `name="x"` and `name = "x"` (spaces around the
+  // equals), so every attribute match below tolerates optional whitespace.
   // Text/hidden/password/number inputs -> keep name=value.
   // Checkboxes -> "on" if checked, else "off" (FS expects explicit crossplay state).
   const inputRe = /<input\b[^>]*>/gi;
   let m;
   while ((m = inputRe.exec(html))) {
     const tag = m[0];
-    const name = (/name="([^"]*)"/i.exec(tag) || [])[1];
-    const type = ((/type="([^"]*)"/i.exec(tag) || [])[1] || 'text').toLowerCase();
+    const name = (/name\s*=\s*"([^"]*)"/i.exec(tag) || [])[1];
+    const type = ((/type\s*=\s*"([^"]*)"/i.exec(tag) || [])[1] || 'text').toLowerCase();
     if (!name) continue;
     if (type === 'submit' || type === 'button') continue;
     if (type === 'checkbox') {
       params[name] = /\bchecked\b/i.test(tag) ? 'on' : 'off';
     } else {
-      params[name] = (/value="([^"]*)"/i.exec(tag) || [, ''])[1];
+      params[name] = (/value\s*=\s*"([^"]*)"/i.exec(tag) || [, ''])[1];
     }
   }
 
   // Selects -> the selected option value (fallback: first option).
-  const selectRe = /<select\b[^>]*name="([^"]*)"[^>]*>([\s\S]*?)<\/select>/gi;
+  const selectRe = /<select\b[^>]*name\s*=\s*"([^"]*)"[^>]*>([\s\S]*?)<\/select>/gi;
   while ((m = selectRe.exec(html))) {
     const name = m[1];
     const block = m[2];
-    const sel = /<option\s+value="([^"]*)"[^>]*\bselected\b/i.exec(block);
-    const first = /<option\s+value="([^"]*)"/i.exec(block);
+    const sel = /<option\s+value\s*=\s*"([^"]*)"[^>]*\bselected\b/i.exec(block);
+    const first = /<option\s+value\s*=\s*"([^"]*)"/i.exec(block);
     if (sel) params[name] = sel[1];
     else if (first) params[name] = first[1];
   }
