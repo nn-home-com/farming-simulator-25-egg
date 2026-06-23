@@ -59,16 +59,18 @@ Es gibt zwei Dockerfiles:
 - `Dockerfile.winehq` — **empfohlen**: aktuelles WineHQ (stable = Wine 11.0).
   Branch per Build-Arg wählbar (`stable` / `staging`).
 
+Vorgebaute Images liegen unter
+`ghcr.io/nn-home-com/farming-simulator-25-egg` (`:latest` = WineHQ 11,
+`:debian` = Wine 8 Fallback) und sind im Egg bereits hinterlegt.
+
+Selbst bauen/pushen:
+
 ```bash
 cd yolk
-# empfohlen:
 docker build -f Dockerfile.winehq --build-arg WINE_BRANCH=stable \
-  -t ghcr.io/DEIN-USER/fs25-server:latest .
-docker push ghcr.io/DEIN-USER/fs25-server:latest
+  -t ghcr.io/nn-home-com/farming-simulator-25-egg:latest .
+docker push ghcr.io/nn-home-com/farming-simulator-25-egg:latest
 ```
-
-Trage denselben Image-Pfad im Egg unter `docker_images` ein
-(aktuell Platzhalter `ghcr.io/CHANGE-ME/fs25-server:latest`).
 
 ### 2. Egg importieren
 

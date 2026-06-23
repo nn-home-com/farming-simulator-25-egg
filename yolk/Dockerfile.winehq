@@ -52,6 +52,8 @@ COPY lib/ /opt/fs25/lib/
 COPY config/ /opt/fs25/config/
 RUN chmod +x /entrypoint.sh /opt/fs25/start.sh /opt/fs25/lib/*.sh
 
+LABEL org.opencontainers.image.source="https://github.com/nn-home-com/farming-simulator-25-egg"
+
 USER container
 ENV HOME=/home/container \
     USER=container
