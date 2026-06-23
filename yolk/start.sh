@@ -86,13 +86,21 @@ fi
 # ---- 4. Render configuration from environment ---------------------------------
 bash "${FS25_LIB}/configure.sh"
 
+# The dedicated server binds its web portal to the container network IP, not
+# loopback, so detect it and share it with the helper that drives the portal.
+WEB_HOST=$(ip -4 addr show scope global 2>/dev/null | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | head -1)
+[ -z "$WEB_HOST" ] && WEB_HOST=$(hostname -i 2>/dev/null | awk '{print $1}')
+[ -z "$WEB_HOST" ] && WEB_HOST=127.0.0.1
+export WEB_HOST
+log "Web portal host detected as ${WEB_HOST}."
+
 # ---- 5. Start the dedicated server (web portal) -------------------------------
-SERVER_LOG="${DEDI_DIR}/dedicatedServer.log"
-mkdir -p "$DEDI_DIR"
-: > "$SERVER_LOG"
+WINE_LOG="${DEDI_DIR}/dedicatedServer.log"
+mkdir -p "$DEDI_DIR/logs"
+: > "$WINE_LOG"
 
 log "Launching dedicatedServer.exe..."
-wine "${GAME_DIR}/dedicatedServer.exe" >>"$SERVER_LOG" 2>&1 &
+wine "${GAME_DIR}/dedicatedServer.exe" >>"$WINE_LOG" 2>&1 &
 WINE_PID=$!
 
 # ---- 8. Clean shutdown handler ------------------------------------------------
@@ -109,25 +117,28 @@ shutdown() {
 trap shutdown SIGINT SIGTERM
 
 # ---- 6. Wait for the web portal, then start the game session ------------------
-log "Waiting for web portal on 127.0.0.1:${WEB_PORT}..."
+log "Waiting for web portal on ${WEB_HOST}:${WEB_PORT}..."
 for i in $(seq 1 60); do
-    if nc -z 127.0.0.1 "$WEB_PORT" 2>/dev/null; then
+    if nc -z "$WEB_HOST" "$WEB_PORT" 2>/dev/null; then
         log "Web portal is up."
         break
     fi
     sleep 2
 done
 
-if nc -z 127.0.0.1 "$WEB_PORT" 2>/dev/null; then
+if nc -z "$WEB_HOST" "$WEB_PORT" 2>/dev/null; then
     log "Requesting game session start via web portal..."
     node "${FS25_LIB}/start-game.mjs" || warn "Could not auto-start the session; start it manually via the web portal on port ${WEB_PORT}."
 else
-    warn "Web portal never came up. Inspect ${SERVER_LOG}."
+    warn "Web portal never came up. Inspect ${WINE_LOG}."
 fi
 
 # ---- 7. Stream the server log to the panel console ----------------------------
-log "Server running. Streaming log (web portal: http://<server-ip>:${WEB_PORT})."
-tail -n +1 -F "$SERVER_LOG" &
+# The rich log is the timestamped session log under dedicated_server/logs/.
+log "Server running. Streaming log (web portal: http://${WEB_HOST}:${WEB_PORT})."
+SERVER_LOG=$(ls -t "${DEDI_DIR}/logs/"server_*.log 2>/dev/null | head -1)
+[ -z "$SERVER_LOG" ] && SERVER_LOG="$WINE_LOG"
+tail -n +1 -F "$SERVER_LOG" "$WINE_LOG" 2>/dev/null &
 TAIL_PID=$!
 
 # Keep PID1 alive while the Wine process runs; react to signals via the trap.
