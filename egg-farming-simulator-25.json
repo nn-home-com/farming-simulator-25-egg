@@ -10,7 +10,8 @@
     "description": "Headless FS25 dedicated server running under Wine. Upload the GIANTS installer, set your CD-key, and the server installs and starts itself. Management via the FS25 web portal (default port 7999).",
     "features": null,
     "docker_images": {
-        "FS25 Wine (ghcr)": "ghcr.io/CHANGE-ME/fs25-server:latest"
+        "FS25 WineHQ 11 (recommended)": "ghcr.io/nn-home-com/farming-simulator-25-egg:latest",
+        "FS25 Debian Wine 8 (fallback)": "ghcr.io/nn-home-com/farming-simulator-25-egg:debian"
     },
     "file_denylist": [],
     "startup": "bash /opt/fs25/start.sh",
