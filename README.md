@@ -138,6 +138,25 @@ Die zwei entscheidenden Stolpersteine (jetzt gelöst):
    Spiel-Kindprozess kein Fenster erstellen und stirbt vor „Entered Gameplay".
    (dbus ist *nicht* nötig, Vulkan schon.)
 
+## Daten: Savegames, Mods, Logs, Config
+
+Diese liegen unter **`data/`** im Server-Wurzelverzeichnis (direkt im
+Dateimanager sichtbar):
+
+```
+data/savegame1/                         # Savegames
+data/mods/                              # Mods (.zip)
+data/log_<datum>.txt                   # Spiel-Log
+data/dedicated_server/logs/            # Server-Manager- & Web-Logs
+data/dedicated_server/dedicatedServerConfig.xml
+```
+
+Technisch ist `data/` ein Symlink-Ziel des sonst tief im (versteckten)
+Wine-Prefix vergrabenen `…/My Games/FarmingSimulator2025`-Ordners. Die
+Config-XMLs werden bei jedem Start aus den Panel-Variablen **neu generiert** –
+dauerhafte Änderungen daher über die Egg-Variablen, nicht durch direktes
+Editieren.
+
 ## DLC-Installation
 
 **`DOWNLOAD_DLC` ist standardmäßig `false`.** Grund: GIANTS' DLC-Installer haben

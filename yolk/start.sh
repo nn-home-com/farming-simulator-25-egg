@@ -27,8 +27,9 @@ DOCS_DIR="${WINEPREFIX}/drive_c/users/container/Documents/My Games/FarmingSimula
 DEDI_DIR="${DOCS_DIR}/dedicated_server"
 INSTALLER_DIR="/home/container/installer"   # user uploads the game installer here
 DLC_DIR="/home/container/dlc"               # user uploads DLC installers here
+DATA_DIR="/home/container/data"             # friendly top-level alias for game data
 
-export GAME_DIR DOCS_DIR DEDI_DIR INSTALLER_DIR DLC_DIR FS25_LIB FS25_CONFIG
+export GAME_DIR DOCS_DIR DEDI_DIR INSTALLER_DIR DLC_DIR DATA_DIR FS25_LIB FS25_CONFIG
 
 # ---- Defaults for tunables (egg variables override these) ----------------------
 export WEB_PORT="${WEB_PORT:-7999}"
@@ -67,6 +68,25 @@ if [ ! -f "${WINEPREFIX}/system.reg" ]; then
     log "Initialising Wine prefix at ${WINEPREFIX} (first run, this can take a minute)..."
     wineboot --init >/tmp/wineboot.log 2>&1
     wineserver -w
+fi
+
+# ---- 2b. Expose game data at a friendly top-level path ------------------------
+# Savegames, mods, logs and config otherwise live deep inside the hidden Wine
+# prefix ("...Documents/My Games/FarmingSimulator2025"), which the panel file
+# manager hides. Point that location at /home/container/data via a symlink so the
+# real, easy-to-find directory sits at the server root. Only done on a clean
+# install: if a real directory already exists there (older servers), leave it
+# untouched so existing data keeps working.
+MYGAMES="${WINEPREFIX}/drive_c/users/container/Documents/My Games"
+mkdir -p "$MYGAMES"
+if [ ! -e "${MYGAMES}/FarmingSimulator2025" ]; then
+    mkdir -p "$DATA_DIR"
+    ln -s "$DATA_DIR" "${MYGAMES}/FarmingSimulator2025"
+    log "Game data exposed at ${DATA_DIR} (savegames, mods, logs, config)."
+elif [ -L "${MYGAMES}/FarmingSimulator2025" ]; then
+    log "Game data available at ${DATA_DIR}."
+else
+    warn "Existing game data found in the Wine prefix; not relinking to ${DATA_DIR}."
 fi
 
 # ---- 3. Install game on first run ---------------------------------------------
