@@ -15,11 +15,13 @@ zu hosten – ohne Windows und ohne VNC.
   auf derselben Lizenz geht nicht – die Lizenz muss separat gekauft werden.
 - Die **Steam-Version funktioniert nicht** als Server (Steam-Spieler können aber
   joinen).
-- Spiel-Installer + DLCs lädst **du selbst** aus dem
-  [GIANTS Download-Portal](https://eshop.giants-software.com/downloads.php) und
-  in den Server hoch. Dieses Egg lädt **nichts Urheberrechtlich-Geschütztes**
-  herunter.
-- Platz: ~50 GB (Basis) bis ~65 GB (mit allen DLCs).
+- Spiel-Installer + DLCs holt der Server beim ersten Start **automatisch** aus
+  dem [GIANTS Download-Portal](https://eshop.giants-software.com/downloads.php) –
+  und zwar **mit deiner eigenen Seriennummer** (genau wie im Browser). Ohne
+  gültigen Key liefert das Portal keinen Link. Du kannst den Installer auch
+  weiterhin selbst hochladen (`AUTO_DOWNLOAD=false`). Es wird **nichts
+  gebündelt, gehostet oder weiterverteilt**.
+- Platz: ~25 GB Download + ~50 GB (Basis) bis ~65 GB (mit allen DLCs) installiert.
 
 ## Aufbau
 
@@ -45,9 +47,12 @@ aus. Der `dedicatedServer.exe` ist im Kern nur ein **Web-Portal** (Standard-Port
 `7999`); die eigentliche Spiel-Session wird über einen HTTP-Request an dieses
 Portal gestartet – das übernimmt `start-game.mjs` automatisch.
 
-Beim **ersten Start** installiert sich das Spiel selbst:
-`wine FarmingSimulator2025.exe /SILENT /NOCANCEL /NOICONS`, danach DLCs, danach
-die einmalige Lizenz-Aktivierung mit deinem `GAME_SERIAL`.
+Beim **ersten Start** lädt der Server das Spiel selbst aus dem offiziellen
+GIANTS-Portal herunter (mit deinem `GAME_SERIAL`, siehe
+`lib/download-game.sh`) – sofern du nicht selbst einen Installer hochgeladen
+hast. Danach installiert es sich silent
+(`wine Setup.exe /SILENT /NOCANCEL /NOICONS /SUPPRESSMSGBOXES`), gefolgt von den
+DLCs und der einmaligen Lizenz-Aktivierung mit deinem `GAME_SERIAL`.
 
 ## Setup
 
@@ -85,17 +90,23 @@ docker push ghcr.io/nn-home-com/farming-simulator-25-egg:latest
 - **Zweite Allocation** für das Web-Portal, gemappt auf Port **7999**
   (`WEB_PORT`).
 
-### 4. Spiel hochladen
+### 4. Spiel bereitstellen
 
-Per SFTP / Dateimanager in die beim Erststellen angelegten Ordner:
+**Einfachster Weg (automatisch):** nichts hochladen – einfach `GAME_SERIAL`
+setzen. Beim ersten Start lädt der Server deine Kopie aus dem GIANTS-Portal,
+installiert sie und aktiviert den Key.
+
+**Manuell (optional):** wenn du `AUTO_DOWNLOAD=false` setzt, lade per SFTP /
+Dateimanager selbst hoch:
 
 - `installer/` → `FarmingSimulator2025.exe` **oder** `FarmingSimulator25_*_ESD.img` / `.zip`
 - `dlc/` → `FarmingSimulator25_*.exe` (optional)
 
 ### 5. Variablen setzen
 
-Mindestens `GAME_SERIAL` (CD-Key) und `WEB_PASSWORD`. Dann Server starten – der
-erste Start dauert mehrere Minuten (Installation).
+Mindestens `GAME_SERIAL` (CD-Key) und `WEB_PASSWORD`. Optional: `AUTO_DOWNLOAD`
+(Standard `true`) und `DOWNLOAD_DLC` (Standard `true`). Dann Server starten – der
+erste Start dauert mehrere Minuten (bei Auto-Download länger: ~21 GB Basisspiel).
 
 ## Was mit echtem Spiel verifiziert ist
 

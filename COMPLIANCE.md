@@ -8,20 +8,31 @@ gültige Lizenz besitzt.
 
 - Scripts, Dockerfiles und Konfigurationsvorlagen, um die **unveränderten**
   GIANTS-Server-Binaries unter Wine auszuführen.
+- Eine **Lizenz-gebundene Download-Automatik** (`yolk/lib/download-game.sh`):
+  Sie schickt die **eigene Seriennummer des Betreibers** an das offizielle
+  GIANTS-Portal (`eshop.giants-software.com/downloads.php`) und lädt die vom
+  Portal zurückgegebenen Original-Dateien vom offiziellen GIANTS-CDN — exakt
+  derselbe Ablauf wie im Browser.
 
 ## Was dieses Projekt ausdrücklich NICHT enthält / NICHT tut
 
-- ❌ Keine Spiel-Dateien, keine GIANTS-Binaries, keine DLCs.
+- ❌ Keine Spiel-Dateien, keine GIANTS-Binaries, keine DLCs werden **gebündelt,
+  gehostet oder weiterverteilt**. Heruntergeladen wird ausschließlich vom
+  offiziellen GIANTS-Server, und nur mit gültiger eigener Seriennummer.
 - ❌ Keine CD-Keys, Keygens, „generischen" oder geteilten Seriennummern.
 - ❌ Keine Cracks, keine gepatchten Executables, keine DRM-Umgehung.
 - ❌ Keine Blockierung/Umleitung der GIANTS-Aktivierungsserver, keine
   Offline-Aktivierungs-Emulation.
+- ❌ **Keine fest verdrahteten Download-URLs**, die die Serien-Prüfung des
+  Portals umgehen. Ohne gültigen Key liefert das Portal keinen Link und der
+  Download bricht ab.
 
 Der Lizenz-Schutz liegt vollständig in GIANTS' eigener Software. Wir führen den
-Original-Installer und dessen **Online-Aktivierung unverändert** aus. Eine
-ungültige oder raubkopierte Seriennummer wird von GIANTS abgelehnt — dieses
-Image umgeht das nicht und soll es nie tun (siehe Policy-Hinweis in
-`yolk/lib/install-game.sh`).
+Original-Installer und dessen **Online-Aktivierung unverändert** aus, und der
+Download ist durch dieselbe Serien-Prüfung gesichert, die GIANTS selbst auf der
+Portal-Seite verwendet. Eine ungültige oder raubkopierte Seriennummer wird von
+GIANTS abgelehnt — dieses Image umgeht das nicht und soll es nie tun (siehe
+Policy-Hinweise in `yolk/lib/install-game.sh` und `yolk/lib/download-game.sh`).
 
 ## Verantwortung des Betreibers
 

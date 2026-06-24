@@ -72,6 +72,13 @@ fi
 # ---- 3. Install game on first run ---------------------------------------------
 if [ ! -f "${GAME_DIR}/dedicatedServer.exe" ]; then
     log "FS25 not installed yet — running installer..."
+    # If no installer was uploaded, fetch it from the official GIANTS portal using
+    # the operator's own serial (license-gated; see lib/download-game.sh).
+    bash "${FS25_LIB}/download-game.sh" || {
+        err "Automatic download failed. Upload the installer into ${INSTALLER_DIR}/"
+        err "manually, or fix GAME_SERIAL, then restart."
+        exit 1
+    }
     if ! bash "${FS25_LIB}/install-game.sh"; then
         err "Installation failed. Check the log above. The server cannot start."
         err "Make sure the installer is uploaded to: ${INSTALLER_DIR}/"
