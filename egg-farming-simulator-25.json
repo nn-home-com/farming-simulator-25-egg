@@ -49,9 +49,9 @@
         },
         {
             "name": "Auto-download DLCs",
-            "description": "Also download the DLC installers your serial entitles you to from the GIANTS portal. Set to false to skip DLCs.",
+            "description": "Download and install the DLC installers your serial entitles you to. OFF by default: GIANTS' DLC installer is GUI-only with no silent mode, so the headless install can leave the DLC flagged as corrupt in the web manager, and Steam-version players who don't own the DLC see it as missing. Enable only if all players own the DLCs on GIANTS; otherwise install DLCs manually.",
             "env_variable": "DOWNLOAD_DLC",
-            "default_value": "true",
+            "default_value": "false",
             "user_viewable": true,
             "user_editable": true,
             "rules": "required|string|in:true,false"

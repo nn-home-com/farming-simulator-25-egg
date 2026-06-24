@@ -135,12 +135,17 @@ Die zwei entscheidenden Stolpersteine (jetzt gelöst):
 
 ## DLC-Installation
 
-GIANTS' DLC-Installer haben **keinen Silent-Modus** – sie ignorieren `/SILENT`
-und öffnen denselben GUI-Dialog wie die Aktivierung (Key-Feld + Button). Das Egg
-steuert sie daher genauso per `xdotool` (Key eintippen, Button klicken) und
-deckelt jeden DLC mit Timeouts, sodass ein DLC den Serverstart **nie** blockiert.
-Falls ein DLC nicht registriert wird, startet der Server trotzdem (ohne diesen
-DLC). DLC-Download steuerst du über `DOWNLOAD_DLC` (Standard `true`).
+**`DOWNLOAD_DLC` ist standardmäßig `false`.** Grund: GIANTS' DLC-Installer haben
+**keinen Silent-Modus** – sie ignorieren `/SILENT` und öffnen denselben
+GUI-Dialog wie die Aktivierung. Das Egg kann sie zwar per `xdotool` durchklicken
+(mit Timeout, sodass ein DLC den Serverstart **nie** blockiert), aber GIANTS'
+Installer **finalisiert headless nicht sauber**: Der DLC wird dann im
+Web-Manager u. U. als **„korrupt"** angezeigt. Zusätzlich sehen **Steam-Spieler**,
+die den DLC nicht besitzen, ihn als fehlend/korrupt.
+
+Empfehlung: DLCs **nur** aktivieren (`DOWNLOAD_DLC=true`), wenn **alle**
+Mitspieler den jeweiligen DLC auf **GIANTS** besitzen – sonst aus lassen oder
+DLCs manuell (z. B. per VNC) installieren.
 
 ## Bekannte offene Punkte
 
