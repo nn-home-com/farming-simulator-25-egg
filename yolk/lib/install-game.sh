@@ -33,12 +33,32 @@ find_installer() {
     img=$(ls "${INSTALLER_DIR}"/FarmingSimulator25_*_ESD.img \
              "${INSTALLER_DIR}"/FarmingSimulator25_*.zip 2>/dev/null | head -n1)
     if [ -n "$img" ]; then
-        log "Extracting ${img##*/}..."
-        7z x "$img" -o"${INSTALLER_DIR}" -y -bso0 -bsp0 || return 1
+        # Note: logs go to stderr so they don't pollute the path on stdout that
+        # the caller captures via installer="$(find_installer)".
+        log "Extracting ${img##*/}..." >&2
+        7z x "$img" -o"${INSTALLER_DIR}" -y -bso0 -bsp0 >&2 || return 1
+        # The image is fully extracted now; drop it to reclaim ~21 GB (and lower
+        # peak disk during install). Re-download happens automatically if needed.
+        case "${KEEP_INSTALLER:-false}" in 1|true|yes|on) : ;; *) rm -f "$img" >&2 || true ;; esac
         [ -f "${INSTALLER_DIR}/FarmingSimulator2025.exe" ] && { echo "${INSTALLER_DIR}/FarmingSimulator2025.exe"; return 0; }
         [ -f "${INSTALLER_DIR}/Setup.exe" ] && { echo "${INSTALLER_DIR}/Setup.exe"; return 0; }
     fi
     return 1
+}
+
+# Remove installer artifacts once the game is installed. The *_ESD.img plus the
+# extracted Setup-*.bin files are ~40+ GB and serve no purpose post-install.
+cleanup_installer() {
+    case "${KEEP_INSTALLER:-false}" in
+        1|true|yes|on) log "KEEP_INSTALLER set — keeping installer files."; return 0 ;;
+    esac
+    log "Cleaning up installer files to reclaim disk space..."
+    rm -f "${INSTALLER_DIR}"/*.img \
+          "${INSTALLER_DIR}"/*.zip \
+          "${INSTALLER_DIR}"/Setup-*.bin \
+          "${INSTALLER_DIR}"/Setup.exe \
+          "${INSTALLER_DIR}"/autorun.inf \
+          "${INSTALLER_DIR}"/FarmingSimulator2025.exe 2>/dev/null || true
 }
 
 # ---- One-time CD-key / activation --------------------------------------------
@@ -182,6 +202,7 @@ if [ "$DLC_ONLY" -eq 0 ]; then
     log "Base game installed."
 
     activate_license || exit 1
+    cleanup_installer
 fi
 
 install_dlcs

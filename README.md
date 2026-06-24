@@ -21,7 +21,12 @@ zu hosten – ohne Windows und ohne VNC.
   gültigen Key liefert das Portal keinen Link. Du kannst den Installer auch
   weiterhin selbst hochladen (`AUTO_DOWNLOAD=false`). Es wird **nichts
   gebündelt, gehostet oder weiterverteilt**.
-- Platz: ~25 GB Download + ~50 GB (Basis) bis ~65 GB (mit allen DLCs) installiert.
+- Platz: **~41 GB** nach der Installation (nur das installierte Spiel). Während
+  der Installation kurzzeitig mehr (Download + Entpacken); die ~40+ GB
+  Installer-Dateien werden danach automatisch gelöscht (`KEEP_INSTALLER=true`
+  behält sie). Auf Hosting-Panels, die nur deine Spieldaten zählen
+  (Savegames/Mods), wirkt der Server viel kleiner – die Basis-Spieldateien sind
+  dort oft geteilt.
 
 ## Aufbau
 
