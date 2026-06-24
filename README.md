@@ -133,13 +133,17 @@ Die zwei entscheidenden Stolpersteine (jetzt gelöst):
    Spiel-Kindprozess kein Fenster erstellen und stirbt vor „Entered Gameplay".
    (dbus ist *nicht* nötig, Vulkan schon.)
 
+## DLC-Installation
+
+GIANTS' DLC-Installer haben **keinen Silent-Modus** – sie ignorieren `/SILENT`
+und öffnen denselben GUI-Dialog wie die Aktivierung (Key-Feld + Button). Das Egg
+steuert sie daher genauso per `xdotool` (Key eintippen, Button klicken) und
+deckelt jeden DLC mit Timeouts, sodass ein DLC den Serverstart **nie** blockiert.
+Falls ein DLC nicht registriert wird, startet der Server trotzdem (ohne diesen
+DLC). DLC-Download steuerst du über `DOWNLOAD_DLC` (Standard `true`).
+
 ## Bekannte offene Punkte
 
-- **CD-Key-Automatik** (`xdotool`) ist ungetestet – die Online-Aktivierung von
-  GIANTS und der Dialog-Aufbau müssen am echten Spiel verifiziert werden. Siehe
-  [ACTIVATION.md](ACTIVATION.md) für den manuellen Fallback.
-- **Log-Pfad/Start-Erkennung**: `start.sh` tailt `dedicatedServer.log`; der
-  echte Pfad/Inhalt ist noch zu bestätigen.
 - **Wine-Version**: Die GIANTS-Tools sind versionsempfindlich. Daher gibt es die
   WineHQ-Variante (Wine 11.0). Falls stable zickt, auf `staging` umbauen.
 

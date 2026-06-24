@@ -101,6 +101,54 @@ activate_license() {
 }
 
 # ---- DLC installation ---------------------------------------------------------
+# GIANTS DLC installers are GUI-only — they ignore /SILENT and pop the same
+# launcher dialog as activation (auto-focused key field + action button), so we
+# drive them with xdotool just like activate_license(). Each install is capped by
+# bounded wait loops so a DLC can NEVER hang the whole server boot (the original
+# bug: a bare `wine "$dlc"` sat on the wizard forever).
+install_one_dlc() {
+    local dlc="$1" name="$2"
+    local target="${DOCS_DIR}/pdlc/${name}.dlc"
+    local serial_clean=""
+    [ -n "${GAME_SERIAL:-}" ] && serial_clean=$(printf '%s' "${GAME_SERIAL}" | tr -d '[:space:]-')
+
+    wine "$dlc" >/tmp/fs25-dlc-${name}.log 2>&1 &
+    local pid=$!
+
+    # Ground truth is the registered .dlc file, not the window state (the GIANTS
+    # window name is flaky). Poll for the file; if the key dialog shows, feed it
+    # the serial once (same coords as activation). Hard-capped at ~3 min so a DLC
+    # can never hang the boot.
+    local typed=0 ok=0
+    for _ in $(seq 1 60); do
+        if [ -f "$target" ]; then ok=1; break; fi
+        if [ "$typed" -eq 0 ] && [ -n "$serial_clean" ] \
+           && xdotool search --onlyvisible --name "FarmingSimulator" >/dev/null 2>&1; then
+            sleep 2
+            xdotool mousemove 746 361 click 1; sleep 0.5
+            xdotool key --clearmodifiers ctrl+a; xdotool key --clearmodifiers Delete; sleep 0.5
+            xdotool type --clearmodifiers "${serial_clean}"; sleep 1.5
+            xdotool mousemove 875 536 click 1
+            typed=1
+        fi
+        sleep 3
+    done
+
+    # Always tear the installer down so it can never linger or block.
+    kill "$pid" >/dev/null 2>&1 || true
+    pkill -f "$(basename "$dlc")" >/dev/null 2>&1 || true
+    sleep 2
+    [ -f "$target" ] && ok=1   # final check after teardown
+
+    if [ "$ok" -eq 1 ]; then
+        log "  ${name} installed."
+        return 0
+    fi
+    warn "  ${name} did not register (continuing without it). The GIANTS DLC"
+    warn "  installer is GUI-only; install it manually or set DOWNLOAD_DLC=false."
+    return 1
+}
+
 install_dlcs() {
     shopt -s nullglob
     local installed=0
@@ -112,13 +160,7 @@ install_dlcs() {
             continue  # already installed
         fi
         log "Installing DLC: ${name}"
-        wine "$dlc" >/tmp/fs25-dlc-${name}.log 2>&1
-        if [ -f "${DOCS_DIR}/pdlc/${name}.dlc" ]; then
-            log "  ${name} installed."
-            installed=$((installed+1))
-        else
-            warn "  ${name} installer ran but the DLC did not register."
-        fi
+        install_one_dlc "$dlc" "$name" && installed=$((installed+1))
     done
     [ "$installed" -gt 0 ] && log "Installed ${installed} new DLC(s)."
     return 0
