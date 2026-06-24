@@ -57,6 +57,15 @@
             "rules": "required|string|in:true,false"
         },
         {
+            "name": "Keep installer files",
+            "description": "Keep the ~40+ GB installer (the *_ESD.img and extracted Setup files) after installation. Off by default: they are deleted post-install to reclaim disk; re-download is automatic if you ever reinstall.",
+            "env_variable": "KEEP_INSTALLER",
+            "default_value": "false",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|in:true,false"
+        },
+        {
             "name": "Server name",
             "description": "Name shown in the multiplayer server browser.",
             "env_variable": "SERVER_NAME",
