@@ -85,11 +85,11 @@
         },
         {
             "name": "Web portal port",
-            "description": "Internal port for the web portal. Must match a server allocation mapped to this port.",
+            "description": "Port for the admin web management portal. Used internally to auto-start the game session, so it always works even if not exposed. To reach the portal in your browser, add a second allocation and set this to that allocation's port number (default 7999).",
             "env_variable": "WEB_PORT",
             "default_value": "7999",
             "user_viewable": true,
-            "user_editable": false,
+            "user_editable": true,
             "rules": "required|integer|between:1024,65535"
         },
         {
