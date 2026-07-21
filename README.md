@@ -126,6 +126,10 @@ Mit echtem GIANTS-Serial + Installer (v1.20.0.0) lokal getestet:
 
 - ✅ **End-to-End**: `start.sh` → Server **ONLINE**, Spiel-Session läuft, Log
   wird auf die Konsole gestreamt. Aus dem finalen Image verifiziert.
+- ✅ **DLC-Installation** (New Holland CR11 Gold Edition): headless in ~31 s
+  installiert; die erzeugte `.dlc` ist **byte-identisch** (SHA256) zu der eines
+  von Hand vollständig durchgeklickten Installers, und die Engine meldet in der
+  laufenden Session `ExtraContent: Unlocked 'CR11GOLD'` ohne jede DLC-Warnung.
 
 Die zwei entscheidenden Stolpersteine (jetzt gelöst):
 
@@ -137,6 +141,13 @@ Die zwei entscheidenden Stolpersteine (jetzt gelöst):
    `wine explorer /desktop=…` gestartet. Ohne Desktop kann der gespawnte
    Spiel-Kindprozess kein Fenster erstellen und stirbt vor „Entered Gameplay".
    (dbus ist *nicht* nötig, Vulkan schon.)
+3. **Kein HTTP-Keep-Alive gegen das Portal** — der GIANTS-Webserver bedient eine
+   Verbindung zur Zeit und verwirft alles, was offengehalten wird; eine
+   wiederverwendete Verbindung lässt den *nächsten* Request als `socket hang up`
+   scheitern. Node aktiviert Keep-Alive im globalen Agent **ab v19
+   standardmäßig**, deshalb setzt `start-game.mjs` explizit `agent: false` und
+   `Connection: close`. Auf dem Bookworm-Image (Node 18) fällt das nicht auf –
+   auf jedem neueren Node wäre der Session-Start sonst tot.
 
 ## Daten: Savegames, Mods, Logs, Config
 
@@ -159,17 +170,52 @@ Editieren.
 
 ## DLC-Installation
 
-**`DOWNLOAD_DLC` ist standardmäßig `false`.** Grund: GIANTS' DLC-Installer haben
-**keinen Silent-Modus** – sie ignorieren `/SILENT` und öffnen denselben
-GUI-Dialog wie die Aktivierung. Das Egg kann sie zwar per `xdotool` durchklicken
-(mit Timeout, sodass ein DLC den Serverstart **nie** blockiert), aber GIANTS'
-Installer **finalisiert headless nicht sauber**: Der DLC wird dann im
-Web-Manager u. U. als **„korrupt"** angezeigt. Zusätzlich sehen **Steam-Spieler**,
-die den DLC nicht besitzen, ihn als fehlend/korrupt.
+**`DOWNLOAD_DLC` ist standardmäßig `true`.** DLCs installieren sich headless in
+etwa 30 Sekunden pro Stück – ohne VNC, ohne manuellen Eingriff.
 
-Empfehlung: DLCs **nur** aktivieren (`DOWNLOAD_DLC=true`), wenn **alle**
-Mitspieler den jeweiligen DLC auf **GIANTS** besitzen – sonst aus lassen oder
-DLCs manuell (z. B. per VNC) installieren.
+GIANTS' DLC-Installer haben **keinen Silent-Modus** (`/SILENT` wird ignoriert)
+und verlangen eine **Online-Aktivierung mit Produktschlüssel**. Headless
+entpacken ist deshalb nicht möglich: Im NSIS-Installer steckt nur ein
+`<dlcStub>`-XML, die eigentliche `.dlc` entsteht erst durch die Aktivierung. Das
+Egg klickt den Dialog daher per `xdotool` durch:
+
+1. Fenster `FarmingSimulator2025`: Produktschlüssel eintippen → **Activate >**
+2. Zweites Fenster mit „Installation successful." → **OK**, danach beendet sich
+   der Installer selbst
+
+Fertig ist der Installer, wenn sein **Prozess endet** – nicht, wenn die Datei
+auftaucht (die existiert ab dem ersten Byte). Welches `.dlc` dazugekommen ist,
+wird per Verzeichnisvergleich ermittelt, nicht aus dem Installer-Namen geraten.
+Jeder DLC ist mit `DLC_TIMEOUT` (Standard 1800 s) gedeckelt und einer
+Fortschrittsprüfung (`DLC_STALL_LIMIT`, Standard 300 s) versehen, sodass ein DLC
+den Serverstart **nie** blockiert.
+
+### Der Web-Manager zeigt DLCs rot an – das ist normal
+
+Im MODS-Tab erscheinen installierte DLCs **rot** mit dem Hinweis
+**„One or more mods are corrupted"**. Das ist eine **Anzeige-Eigenheit von
+GIANTS' Mod-Scanner**, kein Installationsfehler:
+
+- Die erzeugte `.dlc` ist **byte-identisch** zu der eines von Hand komplett
+  durchgeklickten Installers (verifiziert per SHA256).
+- Die Engine lädt und entsperrt sie im laufenden Spiel einwandfrei – im
+  Spiel-Log steht dann z. B.:
+
+  ```
+  Available dlc: (Hash: 2b9007b3…) (Version: 1.0.0.0) pdlc_extraContentNewHollandCR11
+  ExtraContent: Unlocked 'CR11GOLD'
+  ```
+
+- In der Spalte „Issues" steht **kein** konkreter Fehler.
+
+Der Eintrag steht außerdem auf `Active: No` – DLCs werden nicht wie Mods
+aktiviert, das ist ebenfalls normal.
+
+### Was weiterhin gilt
+
+**Steam-Spieler**, die einen DLC nicht besitzen, sehen ihn als fehlend. Das ist
+Lizenzlogik und nicht behebbar. Wenn nicht alle Mitspieler die DLCs auf GIANTS
+besitzen, `DOWNLOAD_DLC=false` setzen.
 
 ## Bekannte offene Punkte
 

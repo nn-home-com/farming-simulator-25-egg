@@ -121,51 +121,134 @@ activate_license() {
 }
 
 # ---- DLC installation ---------------------------------------------------------
-# GIANTS DLC installers are GUI-only — they ignore /SILENT and pop the same
-# launcher dialog as activation (auto-focused key field + action button), so we
-# drive them with xdotool just like activate_license(). Each install is capped by
-# bounded wait loops so a DLC can NEVER hang the whole server boot (the original
-# bug: a bare `wine "$dlc"` sat on the wizard forever).
+# GIANTS DLC installers are GUI-only — they ignore /SILENT and require an online
+# product-key activation, so there is no way to unpack them headlessly (the
+# payload inside the NSIS installer is only a <dlcStub> XML; the real .dlc is
+# produced by the activation). We therefore drive the dialogs with xdotool.
+#
+# The flow, verified against the real installer on FS25 1.20 in a 1280x720 Xvfb:
+#
+#   1. Window "FarmingSimulator2025": "Please enter your <product> Product Key"
+#      -> type the serial into the auto-focused field, click "Activate >"
+#   2. The product window opens and installs
+#   3. A small "Installation successful." message box appears -> OK, then the
+#      installer exits by itself
+#
+# Step 3 is the awkward one: that box carries no window title of its own and
+# shows up at an unpredictable moment, so there is nothing reliable to wait for.
+# We therefore just click the OK position periodically — a click there while the
+# wizard is still working does nothing — and treat the installer exiting as the
+# clean finish.
+#
+# As a bounded fallback we stop once the new .dlc has not changed size for
+# DLC_STABLE_WAIT seconds. Killing the installer at that point is safe and not a
+# guess: the resulting file was verified byte-identical (SHA256) to one produced
+# by a fully hand-clicked run. The new .dlc is identified by diffing the pdlc
+# directory rather than guessing its name from the installer's filename.
+DLC_TIMEOUT="${DLC_TIMEOUT:-900}"          # absolute ceiling per DLC (seconds)
+DLC_STABLE_WAIT="${DLC_STABLE_WAIT:-30}"   # .dlc unchanged this long = finished
+
+pdlc_snapshot() { ls "${DOCS_DIR}/pdlc" 2>/dev/null | sort; }
+pdlc_bytes()    { du -sb "${DOCS_DIR}/pdlc" 2>/dev/null | cut -f1; }
+
 install_one_dlc() {
     local dlc="$1" name="$2"
-    local target="${DOCS_DIR}/pdlc/${name}.dlc"
     local serial_clean=""
     [ -n "${GAME_SERIAL:-}" ] && serial_clean=$(printf '%s' "${GAME_SERIAL}" | tr -d '[:space:]-')
 
-    wine "$dlc" >/tmp/fs25-dlc-${name}.log 2>&1 &
+    mkdir -p "${DOCS_DIR}/pdlc"
+    local before; before="$(pdlc_snapshot)"
+
+    wine "$dlc" >"/tmp/fs25-dlc-${name}.log" 2>&1 &
     local pid=$!
 
-    # Ground truth is the registered .dlc file, not the window state (the GIANTS
-    # window name is flaky). Poll for the file; if the key dialog shows, feed it
-    # the serial once (same coords as activation). Hard-capped at ~3 min so a DLC
-    # can never hang the boot.
-    local typed=0 ok=0
-    for _ in $(seq 1 60); do
-        if [ -f "$target" ]; then ok=1; break; fi
-        if [ "$typed" -eq 0 ] && [ -n "$serial_clean" ] \
-           && xdotool search --onlyvisible --name "FarmingSimulator" >/dev/null 2>&1; then
-            sleep 2
-            xdotool mousemove 746 361 click 1; sleep 0.5
-            xdotool key --clearmodifiers ctrl+a; xdotool key --clearmodifiers Delete; sleep 0.5
-            xdotool type --clearmodifiers "${serial_clean}"; sleep 1.5
-            xdotool mousemove 875 536 click 1
-            typed=1
-        fi
+    local stage=key start elapsed=0 stable=0 since_click=0 last_bytes exited=0
+    start=$(date +%s)
+    last_bytes="$(pdlc_bytes)"
+
+    while :; do
         sleep 3
+        elapsed=$(( $(date +%s) - start ))
+
+        # Cleanest possible finish: the installer ended on its own.
+        if ! kill -0 "$pid" 2>/dev/null; then
+            exited=1
+            log "  ${name}: installer finished on its own after ${elapsed}s."
+            break
+        fi
+
+        if [ "$elapsed" -ge "$DLC_TIMEOUT" ]; then
+            warn "  ${name}: timeout after ${elapsed}s — aborting this DLC."
+            break
+        fi
+
+        # Fill in the product-key dialog if it shows up. It only appears the
+        # FIRST time a given DLC is activated on this machine; on a re-install
+        # the installer goes straight to installing. So this must never gate the
+        # rest of the loop — an earlier version did, and then sat there until the
+        # timeout on every re-install.
+        #
+        # Match "FarmingSimulator2025" (no spaces): that is the key dialog. The
+        # install wizard is titled "Farming Simulator 25 - <product>" and must
+        # not be mistaken for it.
+        if [ "$stage" = key ]; then
+            if [ -n "$serial_clean" ] && [ "$elapsed" -ge 12 ] \
+               && xdotool search --onlyvisible --name "FarmingSimulator2025" >/dev/null 2>&1; then
+                xdotool mousemove 747 361 click 1; sleep 0.5
+                xdotool key --clearmodifiers ctrl+a; xdotool key --clearmodifiers Delete; sleep 0.5
+                xdotool type --clearmodifiers --delay 40 "${serial_clean}"; sleep 2
+                xdotool mousemove 884 536 click 1        # "Activate >"
+                log "  ${name}: product key entered."
+                stage=confirm
+            elif [ "$elapsed" -ge 30 ]; then
+                stage=confirm       # no key dialog — already activated before
+            fi
+        fi
+
+        # Keep tapping OK. The success box has no window title to wait for, and
+        # clicking that spot while the wizard is still busy is a no-op.
+        if [ "$stage" = confirm ]; then
+            since_click=$((since_click + 3))
+            if [ "$since_click" -ge 6 ]; then
+                xdotool mousemove 641 382 click 1 >/dev/null 2>&1 || true
+                since_click=0
+            fi
+        fi
+
+        # Bounded fallback: the payload has stopped changing.
+        local now_bytes; now_bytes="$(pdlc_bytes)"
+        if [ "$now_bytes" != "$last_bytes" ]; then
+            stable=0; last_bytes="$now_bytes"
+        else
+            stable=$((stable + 3))
+        fi
+        if [ "$stable" -ge "$DLC_STABLE_WAIT" ] \
+           && [ -n "$(comm -13 <(printf '%s\n' "$before") <(pdlc_snapshot) | grep -v '^$')" ]; then
+            log "  ${name}: payload unchanged for ${stable}s — finishing up."
+            break
+        fi
     done
 
-    # Always tear the installer down so it can never linger or block.
-    kill "$pid" >/dev/null 2>&1 || true
-    pkill -f "$(basename "$dlc")" >/dev/null 2>&1 || true
+    # Only force it down if it did not end on its own; never leave it running.
+    if [ "$exited" -eq 0 ] && kill -0 "$pid" 2>/dev/null; then
+        xdotool mousemove 641 382 click 1 >/dev/null 2>&1 || true   # one last OK
+        sleep 5
+        kill "$pid" >/dev/null 2>&1 || true
+        sleep 2
+        kill -9 "$pid" >/dev/null 2>&1 || true
+    fi
     sleep 2
-    [ -f "$target" ] && ok=1   # final check after teardown
 
-    if [ "$ok" -eq 1 ]; then
-        log "  ${name} installed."
+    # What actually landed in pdlc/ decides — no filename guessing.
+    local added
+    added="$(comm -13 <(printf '%s\n' "$before") <(pdlc_snapshot) | grep -v '^$' || true)"
+    if [ -n "$added" ]; then
+        log "  ${name} installed ($(printf '%s' "$added" | tr '\n' ' ')) after ${elapsed}s."
         return 0
     fi
-    warn "  ${name} did not register (continuing without it). The GIANTS DLC"
-    warn "  installer is GUI-only; install it manually or set DOWNLOAD_DLC=false."
+
+    warn "  ${name} did not register (continuing without it). Check"
+    warn "  /tmp/fs25-dlc-${name}.log; the installer needs a valid product key."
     return 1
 }
 

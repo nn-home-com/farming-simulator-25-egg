@@ -49,9 +49,9 @@
         },
         {
             "name": "Auto-download DLCs",
-            "description": "Download and install the DLC installers your serial entitles you to. OFF by default: GIANTS' DLC installer is GUI-only with no silent mode, so the headless install can leave the DLC flagged as corrupt in the web manager, and Steam-version players who don't own the DLC see it as missing. Enable only if all players own the DLCs on GIANTS; otherwise install DLCs manually.",
+            "description": "Download and install the DLC installers your serial entitles you to. The GIANTS DLC installer is GUI-only and requires an online product-key activation, so the egg drives its dialogs automatically (about 30 seconds per DLC). Note: the web manager renders installed DLCs in red and shows \"One or more mods are corrupted\" — this is a display quirk of the GIANTS mod scanner, not an installation problem; the game engine loads and unlocks the DLC normally. Players on the Steam version who do not own a DLC will see it as missing.",
             "env_variable": "DOWNLOAD_DLC",
-            "default_value": "false",
+            "default_value": "true",
             "user_viewable": true,
             "user_editable": true,
             "rules": "required|string|in:true,false"

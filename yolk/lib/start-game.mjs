@@ -26,12 +26,18 @@ function request(method, data = {}, cookie = '') {
   let path = '/index.html?lang=en';
   const headers = { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'fs25-egg/1.0' };
   if (cookie) headers['Cookie'] = cookie;
+  // The GIANTS web server serves one connection at a time and drops anything
+  // held open, so a reused socket makes the NEXT request fail with "socket hang
+  // up". Node's global agent enables keepAlive by default from v19 on, so this
+  // must be turned off explicitly — otherwise this script works on the Debian
+  // bookworm image (Node 18) and breaks on any newer Node.
+  headers['Connection'] = 'close';
   const body = encode(data);
   if (method === 'POST') headers['Content-Length'] = Buffer.byteLength(body);
   if (method === 'GET' && body) path += '&' + body;
 
   return new Promise((resolve, reject) => {
-    const req = http.request(`http://${HOST}${path}`, { method, headers }, (res) => {
+    const req = http.request(`http://${HOST}${path}`, { method, headers, agent: false }, (res) => {
       let buf = '';
       res.on('data', (c) => (buf += c));
       res.on('end', () => resolve({ status: res.statusCode, headers: res.headers, body: buf }));
