@@ -248,6 +248,29 @@ GIANTS' Mod-Scanner**, kein Installationsfehler:
 Der Eintrag steht außerdem auf `Active: No` – DLCs werden nicht wie Mods
 aktiviert, das ist ebenfalls normal.
 
+**Es liegt nicht an Wine und nicht an diesem Egg.** Das Problem betrifft
+GIANTS' Dedicated Server allgemein und ist seit Jahren bekannt:
+
+- FS25-Spieler, die die *New Holland CR11 Gold Edition* regulär auf Steam
+  gekauft haben und im Spiel besitzen, berichten dasselbe: „it still shows as
+  corrupted when trying to run the dedicated server"
+  ([Steam-Diskussion](https://steamcommunity.com/app/2300320/discussions/0/4634861275507089861/?ctp=3)).
+- Schon unter FS22 wurden kleine DLCs rot angezeigt (72 KB) und große grün
+  (114 MB); als Ursache wurde dort „the paid DLC is not compatible with
+  dedicated servers" genannt, ohne Lösung
+  ([Steam-Diskussion](https://steamcommunity.com/app/1248130/discussions/0/3203744275156367896/)).
+
+Der Zusammenhang ist die **Größe**: DLCs wie CR11 Gold sind reine
+Freischalt-Container von ~130 KB (die Inhalte stecken im Basisspiel), und
+genau die stuft der Mod-Scanner als korrupt ein. Der Installer selbst ist nur
+9,4 MB groß und kann gar nichts Größeres erzeugen – eine „vollständigere"
+Datei existiert nicht.
+
+Auswirkungen hat das keine: Der Server startet, die Session läuft, die Engine
+entsperrt den Inhalt. Wen die Meldung stört, kann das DLC weglassen
+(`DOWNLOAD_DLC=false` und `data/pdlc/*.dlc` löschen) – dann steht es aber auch
+im Spiel nicht zur Verfügung.
+
 ### Einschränkungen
 
 - **Steam-Spieler**, die einen DLC nicht besitzen, sehen ihn als fehlend. Das
