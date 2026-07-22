@@ -245,8 +245,28 @@ GIANTS' Mod-Scanner**, kein Installationsfehler:
 
 - In der Spalte „Issues" steht **kein** konkreter Fehler.
 
-Der Eintrag steht außerdem auf `Active: No` – DLCs werden nicht wie Mods
-aktiviert, das ist ebenfalls normal.
+### „Active: No" und „Currently no active mods" sind kein Fehler
+
+Mods und DLCs sind zwei getrennte Systeme, die der Web-Manager in einer Tabelle
+vermischt:
+
+| | Mods | DLCs |
+|---|---|---|
+| Ordner | `data/mods/` | `data/pdlc/` |
+| Dateityp | `.zip` | `.dlc` |
+| Aktivierung | über HOME an-/abschaltbar | **gar nicht** – läuft über die Lizenz |
+
+Ein DLC taucht auf der HOME-Seite in **keiner** der beiden Mod-Listen auf und
+hat dort auch keine Checkbox. Steht dort „Currently no active mods", heißt das
+nur: es sind keine *Mods* installiert. Die Spalte `Active` auf der MODS-Seite
+gilt ebenfalls nur für Mods und bleibt bei einem DLC systembedingt auf `No`.
+
+Ob ein DLC tatsächlich greift, steht im Spiel-Log, nicht im Web-Manager:
+
+```
+Available dlc: (Hash: …) (Version: 1.0.0.0) pdlc_extraContentNewHollandCR11
+ExtraContent: Unlocked 'CR11GOLD'
+```
 
 **Es liegt nicht an Wine und nicht an diesem Egg.** Das Problem betrifft
 GIANTS' Dedicated Server allgemein und ist seit Jahren bekannt:
