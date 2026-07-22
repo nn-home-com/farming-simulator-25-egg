@@ -21,6 +21,12 @@
 # portal's serial check.
 set -uo pipefail
 
+# --dlc-only: skip the base game entirely and just fetch DLC installers. Used on
+# every boot of an already-installed server so newly bought DLCs turn up without
+# anyone having to upload an .exe by hand.
+DLC_ONLY=0
+[ "${1:-}" = "--dlc-only" ] && DLC_ONLY=1
+
 PORTAL="https://eshop.giants-software.com/downloads.php"
 # The CDN gates downloads on this Referer; it is also the legit portal page.
 REFERER="$PORTAL"
@@ -36,10 +42,12 @@ case "${AUTO_DOWNLOAD:-true}" in
 esac
 
 # If the operator already uploaded an installer, respect it and don't download.
-if ls "${INSTALLER_DIR}"/FarmingSimulator2025.exe \
-      "${INSTALLER_DIR}"/Setup.exe \
-      "${INSTALLER_DIR}"/FarmingSimulator25_*_ESD.img \
-      "${INSTALLER_DIR}"/FarmingSimulator25_*.zip >/dev/null 2>&1; then
+# (Irrelevant in --dlc-only mode: the base game is not the point there.)
+if [ "$DLC_ONLY" -eq 0 ] \
+   && ls "${INSTALLER_DIR}"/FarmingSimulator2025.exe \
+         "${INSTALLER_DIR}"/Setup.exe \
+         "${INSTALLER_DIR}"/FarmingSimulator25_*_ESD.img \
+         "${INSTALLER_DIR}"/FarmingSimulator25_*.zip >/dev/null 2>&1; then
     log "An installer is already present in ${INSTALLER_DIR}/ — skipping download."
     exit 0
 fi
@@ -48,6 +56,14 @@ if [ -z "${GAME_SERIAL:-}" ]; then
     warn "GAME_SERIAL is empty — cannot auto-download. Set your CD-key or upload"
     warn "the installer into ${INSTALLER_DIR}/ manually."
     exit 0
+fi
+
+# In --dlc-only mode this runs on every boot, so it must never be able to stop a
+# server from starting: any problem below is a warning and a clean exit 0.
+if [ "$DLC_ONLY" -eq 1 ]; then
+    case "${DOWNLOAD_DLC:-true}" in
+        0|false|no|off) log "DLC download disabled (DOWNLOAD_DLC=${DOWNLOAD_DLC})."; exit 0 ;;
+    esac
 fi
 
 mkdir -p "$INSTALLER_DIR" "$DLC_DIR"
@@ -65,6 +81,10 @@ printf 'activationKey=%s&foobar=DOWNLOAD' "${GAME_SERIAL}" > "$BODY"
 
 log "Requesting download links from the GIANTS portal..."
 if ! curl -s -A "$UA" --data "@${BODY}" "$PORTAL" -o "$PORTAL_HTML"; then
+    if [ "$DLC_ONLY" -eq 1 ]; then
+        warn "Could not reach the GIANTS portal — skipping the DLC check this boot."
+        exit 0
+    fi
     err "Could not reach the GIANTS download portal (${PORTAL})."
     exit 1
 fi
@@ -75,6 +95,12 @@ rm -f "$BODY"   # serial no longer needed; drop it early
 IMG_URL=$(grep -ioE 'https://cdn[0-9]*\.giants-software\.com/[^"]+_ESD\.img' "$PORTAL_HTML" | head -n1)
 
 if [ -z "$IMG_URL" ]; then
+    if [ "$DLC_ONLY" -eq 1 ]; then
+        # No links at all means the serial was not accepted. Not fatal here —
+        # the game is already installed and running matters more.
+        warn "The portal returned no links for your serial — skipping DLC check."
+        exit 0
+    fi
     err "The portal returned no download link for your serial."
     err "That usually means the CD-key is invalid/not a GIANTS server license,"
     err "or the portal layout changed. Check GAME_SERIAL, or upload the installer"
@@ -133,8 +159,10 @@ download() {
 }
 
 # ---- 3. Download the base game -----------------------------------------------
-IMG_DEST="${INSTALLER_DIR}/${IMG_URL##*/}"
-download "$IMG_URL" "$IMG_DEST" "Base game" || exit 1
+if [ "$DLC_ONLY" -eq 0 ]; then
+    IMG_DEST="${INSTALLER_DIR}/${IMG_URL##*/}"
+    download "$IMG_URL" "$IMG_DEST" "Base game" || exit 1
+fi
 
 # ---- 4. Download DLCs (optional, on by default) ------------------------------
 case "${DOWNLOAD_DLC:-true}" in

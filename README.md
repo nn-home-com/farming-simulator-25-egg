@@ -173,6 +173,24 @@ Editieren.
 **`DOWNLOAD_DLC` ist standardmäßig `true`.** DLCs installieren sich headless in
 etwa 30 Sekunden pro Stück – ohne VNC, ohne manuellen Eingriff.
 
+### DLC hinzufügen
+
+**Automatisch (Standard):** Bei **jedem** Serverstart fragt das Egg das
+GIANTS-Portal mit deinem `GAME_SERIAL` ab und lädt DLCs herunter, die deine
+Lizenz abdeckt und die noch fehlen; anschließend werden sie installiert. Ein
+neu gekauftes DLC braucht also nur einen **Neustart**. Das Basisspiel wird dabei
+nicht erneut geladen. Schlägt Portal oder Download fehl, startet der Server
+trotzdem – es gibt nur eine Warnung in der Konsole.
+
+**Manuell:** DLC-Installer (`FarmingSimulator25_*.exe`) vom
+[GIANTS-Portal](https://eshop.giants-software.com/downloads.php) laden, im
+Dateimanager bzw. per SFTP nach **`dlc/`** im Server-Wurzelverzeichnis
+hochladen, Server neu starten. Nötig, wenn `AUTO_DOWNLOAD=false` ist oder das
+DLC nicht an deiner Server-Lizenz hängt.
+
+In beiden Fällen gilt: Bereits installierte DLCs werden übersprungen, ein
+Neustart ist also gefahrlos wiederholbar.
+
 GIANTS' DLC-Installer haben **keinen Silent-Modus** (`/SILENT` wird ignoriert)
 und verlangen eine **Online-Aktivierung mit Produktschlüssel**. Headless
 entpacken ist deshalb nicht möglich: Im NSIS-Installer steckt nur ein

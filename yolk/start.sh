@@ -106,7 +106,12 @@ if [ ! -f "${GAME_DIR}/dedicatedServer.exe" ]; then
     fi
 else
     log "FS25 already installed."
-    # Pick up any newly uploaded DLCs without reinstalling the base game.
+    # Fetch DLCs the licence covers but that are not here yet, then install any
+    # DLC sitting in the upload folder. Without the fetch, DOWNLOAD_DLC=true did
+    # nothing on an existing server — the portal was only ever queried during the
+    # very first install. Both steps are best-effort: a DLC must never stop the
+    # server from coming up.
+    bash "${FS25_LIB}/download-game.sh" --dlc-only || warn "DLC download reported problems (continuing)."
     bash "${FS25_LIB}/install-game.sh" --dlc-only || warn "DLC pass reported problems (continuing)."
 fi
 
