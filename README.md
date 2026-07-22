@@ -177,18 +177,37 @@ GIANTS' DLC-Installer haben **keinen Silent-Modus** (`/SILENT` wird ignoriert)
 und verlangen eine **Online-Aktivierung mit Produktschlüssel**. Headless
 entpacken ist deshalb nicht möglich: Im NSIS-Installer steckt nur ein
 `<dlcStub>`-XML, die eigentliche `.dlc` entsteht erst durch die Aktivierung. Das
-Egg klickt den Dialog daher per `xdotool` durch:
+Egg steuert den Installer daher per `xdotool`.
 
-1. Fenster `FarmingSimulator2025`: Produktschlüssel eintippen → **Activate >**
-2. Zweites Fenster mit „Installation successful." → **OK**, danach beendet sich
-   der Installer selbst
+**Ablauf:**
 
-Fertig ist der Installer, wenn sein **Prozess endet** – nicht, wenn die Datei
-auftaucht (die existiert ab dem ersten Byte). Welches `.dlc` dazugekommen ist,
-wird per Verzeichnisvergleich ermittelt, nicht aus dem Installer-Namen geraten.
-Jeder DLC ist mit `DLC_TIMEOUT` (Standard 1800 s) gedeckelt und einer
-Fortschrittsprüfung (`DLC_STALL_LIMIT`, Standard 300 s) versehen, sodass ein DLC
-den Serverstart **nie** blockiert.
+1. **Nur bei der Erstaktivierung** eines DLCs auf dieser Maschine erscheint das
+   Fenster `FarmingSimulator2025` mit „Please enter your … Product Key". Das Egg
+   tippt `GAME_SERIAL` ein und klickt **Activate >**. Bei einer Neuinstallation
+   eines bereits aktivierten DLCs **entfällt dieser Schritt komplett** – der
+   Installer legt sofort los.
+2. Das Installationsfenster `Farming Simulator 25 – <Produkt>` öffnet sich und
+   schreibt die `.dlc` nach `pdlc/`.
+3. Zum Schluss erscheint eine kleine Box **„Installation successful."** mit
+   OK-Button. Sie hat **keinen eigenen Fenstertitel** und taucht zu einem nicht
+   vorhersagbaren Zeitpunkt auf – deshalb wartet das Egg nicht darauf, sondern
+   klickt die OK-Position periodisch an (ein Klick dorthin ist wirkungslos,
+   solange der Installer noch arbeitet). Danach beendet er sich selbst.
+
+**Abbruchbedingungen** – ein DLC blockiert den Serverstart nie:
+
+| Variable | Standard | Bedeutung |
+|---|---|---|
+| `DLC_TIMEOUT` | `900` | harte Obergrenze pro DLC in Sekunden |
+| `DLC_STABLE_WAIT` | `30` | `.dlc` so lange unverändert ⇒ fertig |
+
+Sauberer Abschluss ist das **Ende des Installer-Prozesses** – nicht das
+Auftauchen der Datei (die existiert ab dem ersten Byte; genau darauf hatte eine
+frühere Fassung gewartet und dann mitten hinein gekillt). Greift der
+Stabilitäts-Fallback, wird der Installer beendet; das ist unbedenklich, weil das
+Ergebnis nachweislich byte-identisch ist. Welches `.dlc` neu dazugekommen ist,
+wird per Verzeichnisvergleich von `pdlc/` ermittelt und nicht aus dem
+Installer-Dateinamen abgeleitet.
 
 ### Der Web-Manager zeigt DLCs rot an – das ist normal
 
@@ -211,11 +230,19 @@ GIANTS' Mod-Scanner**, kein Installationsfehler:
 Der Eintrag steht außerdem auf `Active: No` – DLCs werden nicht wie Mods
 aktiviert, das ist ebenfalls normal.
 
-### Was weiterhin gilt
+### Einschränkungen
 
-**Steam-Spieler**, die einen DLC nicht besitzen, sehen ihn als fehlend. Das ist
-Lizenzlogik und nicht behebbar. Wenn nicht alle Mitspieler die DLCs auf GIANTS
-besitzen, `DOWNLOAD_DLC=false` setzen.
+- **Steam-Spieler**, die einen DLC nicht besitzen, sehen ihn als fehlend. Das
+  ist Lizenzlogik und nicht behebbar. Wenn nicht alle Mitspieler die DLCs auf
+  GIANTS besitzen, `DOWNLOAD_DLC=false` setzen.
+- **Getestet wurde bisher nur mit einem DLC**: New Holland CR11 Gold Edition –
+  ein „Stub"-DLC, dessen `.dlc` nur ~131 KB groß ist (die Inhalte stecken im
+  Basisspiel). Ein großes Inhalts-DLC (z. B. eine Karte mit mehreren GB) ist
+  **ungetestet**. Die Abbruchlogik ist darauf ausgelegt, aber falls ein solcher
+  DLC länger als `DLC_TIMEOUT` braucht, muss der Wert hochgesetzt werden.
+- Der **Erstaktivierungs-Pfad** (Key-Dialog, Schritt 1 oben) wurde von Hand
+  verifiziert, aber nicht automatisiert – auf einer Maschine mit bereits
+  aktiviertem DLC lässt er sich nicht mehr auslösen.
 
 ## Bekannte offene Punkte
 
